@@ -12,7 +12,7 @@ export default function CurrentUserCard({ currentUser, onEdit, onSignOut }) {
   }
 
   return (
-    <div className="mb-6 p-4 border rounded-lg bg-gray-100 fixed top-60 left-10 w-96 hidden">
+    <div className="mb-6 p-4 border rounded-lg bg-gray-100 fixed top-60 left-10 w-96">
       <button
         onClick={onSignOut}
         className="absolute top-2 right-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-red-600"
