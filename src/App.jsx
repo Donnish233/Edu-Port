@@ -1,116 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
-import Logo from "./components/header";
-import SignIn from "./components/sign-in-form";
-import StudentList from "./components/stud-list";
-
-const cohort = "XIII";
-
-const studList = [
-  {
-    studentId: cohort + 250701,
-    firstName: "Emily",
-    lastName: "Johnson",
-    age: 28,
-    email: "emily.johnson@x.dummyjson.com",
-    phone: "+81 965-431-3024",
-    password: "emilyspass",
-  },
-  {
-    studentId: cohort + 250702,
-    firstName: "Michael",
-    lastName: "Williams",
-    age: 35,
-    email: "michael.williams@x.dummyjson.com",
-    phone: "+49 258-627-6644",
-    password: "michaelwpass",
-  },
-  {
-    studentId: cohort + 250703,
-    firstName: "Sophia",
-    lastName: "Brown",
-    age: 42,
-    email: "sophia.brown@x.dummyjson.com",
-    phone: "+81 210-652-2785",
-    password: "sophiabpass",
-  },
-  {
-    studentId: cohort + 250704,
-    firstName: "James",
-    lastName: "Davis",
-    age: 45,
-    email: "james.davis@x.dummyjson.com",
-    phone: "+49 614-958-9364",
-    password: "jamesdpass",
-  },
-  {
-    studentId: cohort + 250705,
-    firstName: "Michael",
-    lastName: "Okoronkwo",
-    age: 18,
-    email: "okoronkwomikec@gmail.com",
-    phone: "+234 704-370-5162",
-    password: "1234",
-  },
-  {
-    studentId: cohort + 250706,
-    firstName: "Olivia",
-    lastName: "Wilson",
-    age: 22,
-    email: "olivia.wilson@x.dummyjson.com",
-    phone: "+91 607-295-6448",
-    password: "oliviawpass",
-  },
-  {
-    studentId: cohort + 250707,
-    firstName: "Alexander",
-    lastName: "Jones",
-    age: 38,
-    email: "alexander.jones@x.dummyjson.com",
-    phone: "+61 260-824-4986",
-    password: "alexanderjpass",
-  },
-  {
-    studentId: cohort + 250708,
-    firstName: "Ava",
-    lastName: "Taylor",
-    age: 27,
-    email: "ava.taylor@x.dummyjson.com",
-    phone: "+1 458-853-7877",
-    password: "avatpass",
-  },
-  {
-    studentId: cohort + 250709,
-    firstName: "Ethan",
-    lastName: "Martinez",
-    age: 33,
-    email: "ethan.martinez@x.dummyjson.com",
-    phone: "+92 933-608-5081",
-    password: "ethanmpass",
-  },
-  {
-    studentId: cohort + 250710,
-    firstName: "Isabella",
-    lastName: "Anderson",
-    age: 31,
-    email: "isabella.anderson@x.dummyjson.com",
-    phone: "+49 770-658-4885",
-    password: "isabelladpass",
-  },
-  {
-    studentId: cohort + 250711,
-    firstName: "Emma",
-    lastName: "Miller",
-    age: 30,
-    email: "emma.miller@x.dummyjson.com",
-    phone: "+91 759-776-1614",
-    password: "emmajpass",
-  },
-];
+import Header from "./components/header";
+import SignIn from "./components/SignIn";
+import StudentList from "./components/StudentList";
+import SignUp from "./components/SignUp";
 
 function App() {
+  const [students, setStudents] = useState(() => {
+    const saved = localStorage.getItem("students");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem("currentUser");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem("students", JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
+  }, [currentUser]);
+
+  function handleSignUp(formData) {
+    const lastId =
+      students
+        .map((s) => parseInt(s.studentId.slice(4), 10)) // slice after "VIII"
+        .sort((a, b) => b - a)[0] || 0;
+
+    const nextId = (lastId + 1).toString().padStart(4, "0"); // 0001, 0002...
+    const studentId = `VIII${nextId}`;
+
+    const newStudent = { ...formData, studentId };
+    setStudents((p) => [newStudent, ...p]);
+    setCurrentUser(newStudent);
+    setIsLoggedIn(true);
+    setIsSigningUp(false);
+  }
+
 
   function handleSignIn(user) {
     setCurrentUser(user);
@@ -122,22 +59,48 @@ function App() {
     setIsLoggedIn(false);
   }
 
+  function handleUpdateStudent(updated) {
+    setStudents((prev) =>
+      prev.map((s) => (s.studentId === updated.studentId ? updated : s))
+    );
+    setCurrentUser(updated);
+  }
+
+  function handleDeleteStudent(id) {
+    setStudents((prev) => prev.filter((s) => s.studentId !== id));
+    if (currentUser?.studentId === id) {
+      setCurrentUser(null);
+      setIsLoggedIn(false);
+    }
+  }
+
   return (
-    <>
-      <Logo />
-      <div>
+    <div className="min-h-screen bg-gray-50">
+      <Header isSignedIn={isLoggedIn} search={search} setSearch={setSearch} />
+      <div className="container mx-auto px-4 py-6">
         {isLoggedIn ? (
           <StudentList
-            students={studList}
+            students={students}
             currentUser={currentUser}
-            setCurrentUser={setCurrentUser}
             onSignOut={handleSignOut}
+            onUpdateStudent={handleUpdateStudent}
+            onDeleteStudent={handleDeleteStudent}
+            search={search}
+          />
+        ) : isSigningUp ? (
+          <SignUp
+            onSignUp={handleSignUp}
+            goToSignIn={() => setIsSigningUp(false)}
           />
         ) : (
-          <SignIn students={studList} onSignIn={handleSignIn} />
+          <SignIn
+            students={students}
+            onSignIn={handleSignIn}
+            goToSignUp={() => setIsSigningUp(true)}
+          />
         )}
       </div>
-    </>
+    </div>
   );
 }
 
