@@ -1,107 +1,87 @@
-import { useState, useEffect } from "react";
-import "./App.css";
+import { useState } from "react";
 import Header from "./components/header";
-import SignIn from "./components/SignIn";
+import CurrentUserCard from "./components/CurrentUserCard";
 import StudentList from "./components/StudentList";
 import SignUp from "./components/SignUp";
+import SignIn from "./components/SignIn";
 
-function App() {
-  const [students, setStudents] = useState(() => {
-    const saved = localStorage.getItem("students");
-    return saved ? JSON.parse(saved) : [];
-  });
+let idCounter = 1;
+function generateStudentId() {
+  return `VIII${String(idCounter++).padStart(4, "0")}`;
+}
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
+export default function App() {
+  const [students, setStudents] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem("students", JSON.stringify(students));
-  }, [students]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem("currentUser");
-    }
-  }, [currentUser]);
-
-  function handleSignUp(formData) {
-    const lastId =
-      students
-        .map((s) => parseInt(s.studentId.slice(4), 10)) // slice after "VIII"
-        .sort((a, b) => b - a)[0] || 0;
-
-    const nextId = (lastId + 1).toString().padStart(4, "0"); // 0001, 0002...
-    const studentId = `VIII${nextId}`;
-
-    const newStudent = { ...formData, studentId };
-    setStudents((p) => [newStudent, ...p]);
+  function addStudent(student) {
+    const newStudent = { ...student, studentId: generateStudentId() };
+    setStudents((prev) => [...prev, newStudent]);
     setCurrentUser(newStudent);
-    setIsLoggedIn(true);
     setIsSigningUp(false);
   }
 
-
-  function handleSignIn(user) {
-    setCurrentUser(user);
-    setIsLoggedIn(true);
-  }
-
-  function handleSignOut() {
-    setCurrentUser(null);
-    setIsLoggedIn(false);
-  }
-
-  function handleUpdateStudent(updated) {
+  function updateStudent(updated) {
     setStudents((prev) =>
       prev.map((s) => (s.studentId === updated.studentId ? updated : s))
     );
     setCurrentUser(updated);
   }
 
-  function handleDeleteStudent(id) {
-    setStudents((prev) => prev.filter((s) => s.studentId !== id));
-    if (currentUser?.studentId === id) {
-      setCurrentUser(null);
-      setIsLoggedIn(false);
-    }
+  function deleteStudent(studentId) {
+    setStudents((prev) => prev.filter((s) => s.studentId !== studentId));
+    if (currentUser?.studentId === studentId) setCurrentUser(null);
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header isSignedIn={isLoggedIn} search={search} setSearch={setSearch} />
-      <div className="container mx-auto px-4 py-6">
-        {isLoggedIn ? (
-          <StudentList
-            students={students}
-            currentUser={currentUser}
-            onSignOut={handleSignOut}
-            onUpdateStudent={handleUpdateStudent}
-            onDeleteStudent={handleDeleteStudent}
-            search={search}
-          />
+    <div className="min-h-screen bg-gray-100 w-screen">
+      <Header
+        isSignedIn={!!currentUser}
+        search={search}
+        setSearch={setSearch}
+      />
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {currentUser ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Sticky current user card */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-60">
+                <CurrentUserCard
+                  currentUser={currentUser}
+                  onSignOut={() => setCurrentUser(null)}
+                  onUpdateStudent={updateStudent}
+                  onDeleteStudent={deleteStudent}
+                />
+              </div>
+            </div>
+
+            {/* Scrollable list */}
+            <div>
+              <StudentList
+                students={students}
+                currentUser={currentUser}
+                onUpdateStudent={updateStudent}
+                onDeleteStudent={deleteStudent}
+                onSignOut={() => setCurrentUser(null)}
+                search={search}
+              />
+            </div>
+          </div>
         ) : isSigningUp ? (
           <SignUp
-            onSignUp={handleSignUp}
+            onSignUp={addStudent}
             goToSignIn={() => setIsSigningUp(false)}
           />
         ) : (
           <SignIn
             students={students}
-            onSignIn={handleSignIn}
+            onSignIn={setCurrentUser}
             goToSignUp={() => setIsSigningUp(true)}
           />
         )}
-      </div>
+      </main>
     </div>
   );
 }
-
-export default App;
